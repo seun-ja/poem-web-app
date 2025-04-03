@@ -32,7 +32,7 @@ mod schemas {
         }
 
         pub fn password_match(&self, password: &str) -> Result<User, ApiError> {
-            if &self.encrypted_password == password {
+            if self.encrypted_password == password {
                 Ok(self.user_pub_data())
             } else {
                 Err(ApiError::InvalidCredentials)
@@ -76,14 +76,14 @@ mod schemas {
         pub last_name: String,
     }
 
-    impl Into<UserDbSchema> for NewUser {
-        fn into(self) -> UserDbSchema {
+    impl From<NewUser> for UserDbSchema {
+        fn from(val: NewUser) -> Self {
             UserDbSchema {
                 id: uuid::Uuid::new_v4(),
-                encrypted_password: self.password,
-                email: self.email,
-                first_name: self.first_name,
-                last_name: self.last_name,
+                encrypted_password: val.password,
+                email: val.email,
+                first_name: val.first_name,
+                last_name: val.last_name,
             }
         }
     }
