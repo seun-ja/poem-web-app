@@ -1,0 +1,23 @@
+[package]
+name = "peom_dev_take_home"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# Web
+tokio = { version = "1.21.0", features = ["macros", "rt-multi-thread"] }
+poem = { version = "3.1.8", features = ["session"] }
+
+# Serde
+serde = { version = "^1", features = ["derive"] }
+serde_json = "^1"
+
+# Error
+thiserror = "2.0.12"
+
+# Docs
+poem-openapi = { version = "5", features = ["swagger-ui", "uuid"] }
+
+# Utils
+uuid = { version = "1.15.1", features = ["serde", "v4"] }
+secrecy = "0.10.3"
