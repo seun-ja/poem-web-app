@@ -3,9 +3,12 @@ pub mod error;
 pub mod handles;
 pub mod state;
 
-pub use docs::OpenApiDoc;
-
 mod schemas {
+    use argon2::{
+        Argon2, PasswordHash, PasswordVerifier as _,
+        password_hash::{PasswordHasher, SaltString},
+    };
+    use base64::{Engine, engine::general_purpose};
     use poem_openapi::Object;
     use serde::Deserialize;
     use uuid::Uuid;
@@ -22,30 +25,19 @@ mod schemas {
     }
 
     impl UserDbSchema {
-        pub fn user_pub_data(&self) -> User {
-            User {
-                id: self.id,
-                email: self.email.clone(),
-                first_name: self.first_name.clone(),
-                last_name: self.last_name.clone(),
-            }
+        pub fn logged_user(&self) -> LoggedUser {
+            LoggedUser { id: self.id }
         }
 
-        pub fn password_match(&self, password: &str) -> Result<User, ApiError> {
-            if self.encrypted_password == password {
-                Ok(self.user_pub_data())
-            } else {
-                Err(ApiError::InvalidCredentials)
-            }
-        }
-    }
+        pub fn verify_password(&self, password: &str) -> Result<LoggedUser, ApiError> {
+            let expected_password_hash = PasswordHash::new(&self.encrypted_password)
+                .map_err(|_| ApiError::InvalidPasswordHash)?;
 
-    #[derive(Debug, Clone, Deserialize, Object)]
-    pub struct User {
-        id: Uuid,
-        email: String,
-        first_name: String,
-        last_name: String,
+            Argon2::default()
+                .verify_password(password.as_bytes(), &expected_password_hash)
+                .map_err(|_| ApiError::InvalidCredentials)
+                .map(|_| self.logged_user())
+        }
     }
 
     impl UserDbSchema {
@@ -59,12 +51,16 @@ mod schemas {
     }
 
     impl PasswordEncryptor for UserDbSchema {
-        fn encrypt_password(&self, _pass_phrase: String) -> Self {
-            todo!()
-        }
-
-        fn decrypt_password(&self, _pass_phrase: String) -> Self {
-            todo!()
+        fn encrypt_password(&mut self, pass_phrase: String) -> Self {
+            let password_hash = Argon2::default()
+                .hash_password(
+                    self.encrypted_password.as_bytes(),
+                    &SaltString::from_b64(&general_purpose::STANDARD.encode(pass_phrase)).unwrap(),
+                )
+                .unwrap()
+                .to_string();
+            self.encrypted_password = password_hash;
+            self.clone()
         }
     }
 
@@ -87,69 +83,13 @@ mod schemas {
             }
         }
     }
+
+    #[derive(Debug, Clone, Deserialize, Object)]
+    pub struct LoggedUser {
+        id: Uuid,
+    }
 }
 
 pub trait PasswordEncryptor {
-    fn encrypt_password(&self, pass_phrase: String) -> Self;
-    fn decrypt_password(&self, pass_phrase: String) -> Self;
-}
-
-mod docs {
-    use poem::web::{Data, Query};
-    use poem_openapi::{
-        OpenApi,
-        payload::{Json, PlainText},
-    };
-
-    use crate::{
-        error::ApiError,
-        handles::{
-            login::{LoginParameters, login},
-            signup::signup,
-        },
-        schemas::{NewUser, User},
-        state::AppState,
-    };
-
-    pub struct OpenApiDoc;
-
-    #[OpenApi]
-    impl OpenApiDoc {
-        #[oai(path = "/ping", method = "get")]
-        async fn testing(&self) -> PlainText<String> {
-            PlainText("pong".to_string())
-        }
-
-        #[oai(path = "/login", method = "post")]
-        async fn login(
-            &self,
-            params: poem::Result<Query<LoginParameters>>,
-            data: Data<&AppState>,
-        ) -> poem::Result<Json<User>> {
-            if let Ok(params) = params {
-                login(params.0, data)
-                    .await
-                    .map_err(|err| err.into())
-                    .map(Json)
-            } else {
-                Err(ApiError::NonExistence.into())
-            }
-        }
-
-        #[oai(path = "/signup", method = "post")]
-        async fn signup(
-            &self,
-            params: poem::Result<Query<NewUser>>,
-            data: Data<&AppState>,
-        ) -> poem::Result<Json<User>> {
-            if let Ok(params) = params {
-                signup(params.0, data)
-                    .await
-                    .map_err(|err| err.into())
-                    .map(Json)
-            } else {
-                Err(ApiError::NonExistence.into())
-            }
-        }
-    }
+    fn encrypt_password(&mut self, pass_phrase: String) -> Self;
 }

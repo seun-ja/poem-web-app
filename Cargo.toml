@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 # Web
 tokio = { version = "1.21.0", features = ["macros", "rt-multi-thread"] }
-poem = { version = "3.1.8", features = ["session"] }
+poem = "3.1.8"
 
 # Serde
 serde = { version = "^1", features = ["derive"] }
@@ -14,10 +14,17 @@ serde_json = "^1"
 
 # Error
 thiserror = "2.0.12"
+anyhow = "1.0.97"
 
 # Docs
 poem-openapi = { version = "5", features = ["swagger-ui", "uuid"] }
 
 # Utils
 uuid = { version = "1.15.1", features = ["serde", "v4"] }
-secrecy = "0.10.3"
+jsonwebtoken = "9.3.1"
+argon2 = "0.5.3"
+base64 = "0.22.1"
+chrono = "0.4.40"
+
+dotenvy = "0.15"
+envy = "0.4.2"

@@ -1,19 +1,16 @@
 use poem::web::Data;
 
-use crate::{
-    error::ApiError,
-    schemas::{NewUser, User},
-    state::AppState,
-};
+use crate::{error::ApiError, schemas::NewUser, state::AppState};
 
-pub async fn signup(params: NewUser, data: Data<&AppState>) -> Result<User, ApiError> {
-    if let Ok(user) = data
+pub async fn signup(params: NewUser, data: Data<&AppState>) -> Result<(), ApiError> {
+    if data
         .db
         .lock()
         .map_err(|err| ApiError::LockPoison(err.to_string()))?
-        .insert(params, data.paraphrase.clone())
+        .insert(params, data.passphrase.clone())
+        .is_ok()
     {
-        Ok(user.user_pub_data())
+        Ok(())
     } else {
         Err(ApiError::InvalidCredentials)
     }
