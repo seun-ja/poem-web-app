@@ -3,7 +3,10 @@ pub mod login;
 pub mod logout;
 pub mod signup;
 
-use jwt::handle_jwt_token;
+use std::sync::Arc;
+
+use jwt::{extract_header_value, handle_jwt_token};
+use logout::black_list_user_jwt;
 use poem::web::{Data, Query};
 use poem_openapi::{
     OpenApi,
@@ -20,6 +23,7 @@ use crate::{
     state::AppState,
 };
 
+#[derive(Debug)]
 pub struct OpenApiDoc;
 
 #[OpenApi]
@@ -32,47 +36,59 @@ impl OpenApiDoc {
     #[oai(path = "/login", method = "post")]
     async fn login(
         &self,
-        params: poem::Result<Query<LoginParameters>>,
-        data: Data<&AppState>,
+        Query(params): Query<LoginParameters>,
+        req: &poem::Request,
+        Data(data): Data<&Arc<AppState>>,
     ) -> poem::Result<Json<LoggedUser>> {
-        if let Ok(params) = params {
-            login(params.0, data)
-                .await
-                .map_err(|err| err.into())
-                .map(Json)
-        } else {
-            Err(ApiError::NonExistence.into())
+        if let Some(header_value) = req.headers().get("Authorization") {
+            if let Some(token) = extract_header_value(header_value) {
+                if data
+                    .db
+                    .lock()
+                    .map_err(|err| ApiError::LockPoison(err.to_string()))?
+                    .check_token_black_listed(token)
+                {
+                    return Err(ApiError::TokenBlacklisted.into());
+                }
+            }
         }
+
+        login(params, data)
+            .await
+            .map_err(|err| err.into())
+            .map(Json)
     }
 
+    #[tracing::instrument(skip(data, params))]
     #[oai(path = "/signup", method = "post")]
     async fn signup(
         &self,
-        params: poem::Result<Query<NewUser>>,
-        data: Data<&AppState>,
+        Query(params): Query<NewUser>,
+        Data(data): Data<&Arc<AppState>>,
     ) -> poem::Result<()> {
-        if let Ok(params) = params {
-            if signup(params.0, data).await.is_ok() {
-                Ok(())
-            } else {
-                Err(ApiError::NonExistence.into())
-            }
-        } else {
-            Err(ApiError::NonExistence.into())
-        }
+        signup(params, data).await.map_err(|err| err.into())
     }
 
     #[oai(path = "/protected", method = "get")]
     async fn protected(
         &self,
         req: &poem::Request,
-        data: Data<&AppState>,
+        Data(data): Data<&Arc<AppState>>,
     ) -> poem::Result<PlainText<String>> {
-        if let Some(token) = req.headers().get("Authorization") {
-            if let Ok(name) = handle_jwt_token(token, &data.secret) {
-                Ok(PlainText(format!("Access granted, user: {}", name)))
+        if let Some(header_value) = req.headers().get("Authorization") {
+            if let Some(token) = extract_header_value(header_value) {
+                if data
+                    .db
+                    .lock()
+                    .map_err(|err| ApiError::LockPoison(err.to_string()))?
+                    .check_token_black_listed(token)
+                {
+                    return Err(ApiError::Unauthorized.into());
+                }
+                handle_jwt_token(token, &data.hmac_secret)
+                    .map(|name| Ok(PlainText(format!("Access granted, user: {}", name))))?
             } else {
-                Err(ApiError::Unauthorized.into())
+                Err(ApiError::NoTokenProvided.into())
             }
         } else {
             Err(ApiError::Unauthorized.into())
@@ -80,5 +96,21 @@ impl OpenApiDoc {
     }
 
     #[oai(path = "/logout", method = "post")]
-    async fn logout(&self) {}
+    async fn logout(
+        &self,
+        req: &poem::Request,
+        Data(data): Data<&Arc<AppState>>,
+    ) -> poem::Result<()> {
+        if let Some(header_value) = req.headers().get("Authorization") {
+            if let Some(token) = extract_header_value(header_value) {
+                black_list_user_jwt(token, data)
+                    .map_err(|err| err.into())
+                    .map(|_| ())
+            } else {
+                Err(ApiError::Unauthorized.into())
+            }
+        } else {
+            Err(ApiError::Unauthorized.into())
+        }
+    }
 }

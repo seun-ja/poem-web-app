@@ -10,10 +10,12 @@ use poem_openapi::OpenApiService;
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
     dotenvy::dotenv().ok();
+    let config = envy::from_env::<Config>().expect("parse env as Config");
+
+    peom_dev_take_home::tracing::init(&config.log_level);
+
     let api_service = OpenApiService::new(OpenApiDoc, "Take Home Assessment API Docs", "1.0");
     let ui = api_service.swagger_ui();
-
-    let config = envy::from_env::<Config>().expect("parse env as Config");
 
     let app_state = AppState::build(config).expect("Appstate initiate");
     let app_state = Arc::new(app_state);

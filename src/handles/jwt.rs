@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, encode};
+use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use poem::http::HeaderValue;
 use serde::{Deserialize, Serialize};
 
@@ -12,50 +12,51 @@ struct Claims {
     exp: usize,
 }
 
-pub fn handle_jwt_token(token: &HeaderValue, secret: &str) -> Result<String, ApiError> {
-    if let Some(jwt) = extract_header_value(token) {
-        if let Ok(claim) = jsonwebtoken::decode::<Claims>(
-            jwt,
-            &DecodingKey::from_secret(secret.as_ref()),
-            &Validation::new(Algorithm::HS256),
-        ) {
-            // Check if the token is expired
-            if let Some(expiry) = DateTime::from_timestamp(claim.claims.exp as i64, 0) {
-                let now = chrono::Utc::now();
-                if now > expiry {
-                    return Err(ApiError::ExpiredJWTs);
+pub fn handle_jwt_token(jwt: &str, hmac_secret: &str) -> Result<String, ApiError> {
+    jsonwebtoken::decode::<Claims>(
+        jwt,
+        &DecodingKey::from_secret(hmac_secret.as_bytes()),
+        &Validation::new(Algorithm::HS256),
+    )
+    .map_err(|err| ApiError::UnableToDecodeClaims(err.into()))
+    .map(|claims| {
+        let _expiry = DateTime::from_timestamp(claims.claims.exp as i64, 0)
+            .ok_or(ApiError::ExpiredJWTs)
+            .map(|e| {
+                if e < Utc::now() {
+                    Err(ApiError::ExpiredJWTs)
+                } else {
+                    Ok(())
                 }
-            }
-            Ok(claim.claims.name)
-        } else {
-            Err(ApiError::InvalidCredentials)
-        }
-    } else {
-        Err(ApiError::InvalidCredentials)
-    }
+            });
+        claims.claims.name
+    })
 }
 
 pub fn extract_header_value(token: &HeaderValue) -> Option<&str> {
-    token.to_str().ok()
+    token
+        .to_str()
+        .ok()
+        .map(|t| t.split(' ').collect::<Vec<&str>>()[1])
 }
 
-pub fn create_jwt(uid: &str, secret: &str) -> Result<String, ApiError> {
+pub fn create_jwt(uid: &str, name: &str, hmac_secret: &str) -> Result<String, ApiError> {
     let expiration = Utc::now()
-        .checked_add_signed(chrono::Duration::days(2))
+        .checked_add_signed(chrono::Duration::days(1))
         .map(|dt| dt.timestamp())
         .ok_or(ApiError::WrongTimeStamp)?;
 
     let claims = Claims {
         sub: uid.to_owned(),
         exp: expiration as usize,
-        name: "Poem".to_string(),
+        name: name.to_owned(),
     };
 
     let header = Header::new(Algorithm::HS256);
-    encode(
+    jsonwebtoken::encode(
         &header,
         &claims,
-        &EncodingKey::from_secret(secret.as_bytes()),
+        &EncodingKey::from_secret(hmac_secret.as_bytes()),
     )
     .map_err(|e| ApiError::InvalidJWTCredentials(e.into()))
 }

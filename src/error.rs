@@ -20,6 +20,16 @@ pub enum ApiError {
     InvalidJWTCredentials(#[source] anyhow::Error),
     #[error("Wrong timestamp")]
     WrongTimeStamp,
+    #[error("Token blacklisted")]
+    TokenBlacklisted,
+    #[error("Error parsing salt string: {0}")]
+    ErrorParsingSaltString(argon2::password_hash::Error),
+    #[error("Failed hashing password: {0}")]
+    FailedHashingPassword(argon2::password_hash::Error),
+    #[error("No token provided")]
+    NoTokenProvided,
+    #[error("Unable to decode claims: {0}")]
+    UnableToDecodeClaims(#[source] anyhow::Error),
 }
 
 impl ResponseError for ApiError {
@@ -34,6 +44,11 @@ impl ResponseError for ApiError {
             ApiError::InvalidJWTCredentials(_) => StatusCode::UNAUTHORIZED,
             ApiError::InvalidPasswordHash => StatusCode::INTERNAL_SERVER_ERROR,
             ApiError::WrongTimeStamp => StatusCode::INTERNAL_SERVER_ERROR,
+            ApiError::TokenBlacklisted => StatusCode::UNAUTHORIZED,
+            ApiError::ErrorParsingSaltString(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            ApiError::FailedHashingPassword(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            ApiError::NoTokenProvided => StatusCode::UNAUTHORIZED,
+            ApiError::UnableToDecodeClaims(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }

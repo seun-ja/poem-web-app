@@ -7,21 +7,20 @@ use crate::db::InMemDatabase;
 pub struct AppState {
     pub db: Mutex<InMemDatabase>,
     pub passphrase: String,
-    pub secret: String,
-    pub black_listed_jwt: Vec<String>,
+    pub hmac_secret: String,
 }
 
 impl AppState {
     pub fn build(config: Config) -> poem::Result<Self> {
         let db = Mutex::new(InMemDatabase {
-            mem: BTreeMap::new(),
+            user_db: BTreeMap::new(),
+            black_listed_db: Vec::new(),
         });
 
         Ok(Self {
             db,
             passphrase: config.passphrase.clone(),
-            secret: config.secret.clone(),
-            black_listed_jwt: config.get_black_listed_jwt(),
+            hmac_secret: config.hmac_secret.clone(),
         })
     }
 }
@@ -29,12 +28,6 @@ impl AppState {
 #[derive(Deserialize)]
 pub struct Config {
     pub passphrase: String,
-    pub secret: String,
-    black_listed_jwt: String,
-}
-
-impl Config {
-    fn get_black_listed_jwt(&self) -> Vec<String> {
-        self.black_listed_jwt.split(',').map(String::from).collect()
-    }
+    pub hmac_secret: String,
+    pub log_level: String,
 }

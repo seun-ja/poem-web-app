@@ -1,20 +1,20 @@
 use std::collections::{BTreeMap, btree_map};
 
 use crate::{
-    PasswordEncryptor,
     error::ApiError,
     schemas::{NewUser, UserDbSchema},
 };
 
 pub struct InMemDatabase {
-    pub(crate) mem: BTreeMap<String, UserDbSchema>,
+    pub(crate) user_db: BTreeMap<String, UserDbSchema>,
+    pub(crate) black_listed_db: Vec<String>,
 }
 
 impl InMemDatabase {
-    pub fn insert(&mut self, new_user: NewUser, pass_phrase: String) -> Result<(), ApiError> {
+    pub fn insert_user(&mut self, new_user: NewUser, pass_phrase: String) -> Result<(), ApiError> {
         let user: UserDbSchema = new_user.into();
-        if let btree_map::Entry::Vacant(e) = self.mem.entry(user.get_email().to_string()) {
-            e.insert(user.clone().encrypt_password(pass_phrase));
+        if let btree_map::Entry::Vacant(e) = self.user_db.entry(user.get_email().to_string()) {
+            e.insert(user.clone().encrypt_password(pass_phrase)?);
             Ok(())
         } else {
             Err(ApiError::AlreadyExist)
@@ -27,12 +27,25 @@ impl InMemDatabase {
         // }
     }
 
-    pub fn get(&self, email: &str) -> Result<UserDbSchema, ApiError> {
-        if let Some(user) = self.mem.get(email) {
+    pub fn get_user(&self, email: &str) -> Result<UserDbSchema, ApiError> {
+        if let Some(user) = self.user_db.get(email) {
             let value = user.clone();
             Ok(value)
         } else {
             Err(ApiError::NonExistence)
         }
+    }
+
+    pub fn insert_black_list(&mut self, new_token: String) {
+        self.black_listed_db.push(new_token)
+    }
+
+    pub fn check_token_black_listed(&self, token: &str) -> bool {
+        for blacklisted_token in &self.black_listed_db {
+            if blacklisted_token == token {
+                return true;
+            }
+        }
+        false
     }
 }

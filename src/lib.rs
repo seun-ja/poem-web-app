@@ -13,7 +13,7 @@ mod schemas {
     use serde::Deserialize;
     use uuid::Uuid;
 
-    use crate::{PasswordEncryptor, error::ApiError};
+    use crate::{error::ApiError, handles::jwt::create_jwt};
 
     #[derive(Debug, Clone, Deserialize, Object)]
     pub struct UserDbSchema {
@@ -25,42 +25,39 @@ mod schemas {
     }
 
     impl UserDbSchema {
-        pub fn logged_user(&self) -> LoggedUser {
-            LoggedUser { id: self.id }
-        }
-
-        pub fn verify_password(&self, password: &str) -> Result<LoggedUser, ApiError> {
+        pub fn verify_password(
+            &self,
+            password: &str,
+            hmac_secret: &str,
+        ) -> Result<LoggedUser, ApiError> {
             let expected_password_hash = PasswordHash::new(&self.encrypted_password)
                 .map_err(|_| ApiError::InvalidPasswordHash)?;
 
             Argon2::default()
                 .verify_password(password.as_bytes(), &expected_password_hash)
-                .map_err(|_| ApiError::InvalidCredentials)
-                .map(|_| self.logged_user())
+                .map_err(|_| ApiError::InvalidCredentials)?;
+
+            Ok(LoggedUser {
+                token: create_jwt(&self.id.to_string(), &self.first_name, hmac_secret)?,
+            })
         }
     }
 
     impl UserDbSchema {
-        pub fn get_id(&self) -> Uuid {
-            self.id
-        }
-
         pub fn get_email(&self) -> &str {
             &self.email
         }
-    }
 
-    impl PasswordEncryptor for UserDbSchema {
-        fn encrypt_password(&mut self, pass_phrase: String) -> Self {
-            let password_hash = Argon2::default()
+        pub fn encrypt_password(&mut self, pass_phrase: String) -> Result<Self, ApiError> {
+            let salt = general_purpose::STANDARD_NO_PAD.encode(pass_phrase);
+            self.encrypted_password = Argon2::default()
                 .hash_password(
                     self.encrypted_password.as_bytes(),
-                    &SaltString::from_b64(&general_purpose::STANDARD.encode(pass_phrase)).unwrap(),
+                    &SaltString::from_b64(&salt).map_err(ApiError::ErrorParsingSaltString)?,
                 )
-                .unwrap()
+                .map_err(ApiError::FailedHashingPassword)?
                 .to_string();
-            self.encrypted_password = password_hash;
-            self.clone()
+            Ok(self.clone())
         }
     }
 
@@ -86,10 +83,23 @@ mod schemas {
 
     #[derive(Debug, Clone, Deserialize, Object)]
     pub struct LoggedUser {
-        id: Uuid,
+        token: String,
     }
 }
 
-pub trait PasswordEncryptor {
-    fn encrypt_password(&mut self, pass_phrase: String) -> Self;
+pub mod tracing {
+    use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _};
+
+    pub fn init(env_filter: &str) {
+        let env_filter = EnvFilter::from(env_filter);
+        let subscriber = tracing_subscriber::registry()
+            .with(env_filter)
+            .with(tracing_subscriber::fmt::layer());
+        tracing::subscriber::set_global_default(subscriber)
+            .expect("Failed to set global default subscriber");
+    }
 }
+
+// pub trait PasswordEncryptor {
+//     fn encrypt_password(&mut self, pass_phrase: String) -> Result<Self, ApiError>;
+// }
