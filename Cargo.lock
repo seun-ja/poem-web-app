@@ -862,28 +862,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "peom_dev_take_home"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "argon2",
- "base64 0.22.1",
- "chrono",
- "dotenvy",
- "envy",
- "jsonwebtoken",
- "poem",
- "poem-openapi",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "uuid",
-]
-
-[[package]]
 name = "percent-encoding"
 version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -994,6 +972,28 @@ dependencies = [
  "regex",
  "syn",
  "thiserror",
+]
+
+[[package]]
+name = "poem_dev_take_home"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "argon2",
+ "base64 0.22.1",
+ "chrono",
+ "dotenvy",
+ "envy",
+ "jsonwebtoken",
+ "poem",
+ "poem-openapi",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]

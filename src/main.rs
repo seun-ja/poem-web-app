@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use peom_dev_take_home::{
+use poem::{listener::TcpListener, EndpointExt, Route, Server};
+use poem_dev_take_home::{
     handles::OpenApiDoc,
     state::{AppState, Config},
 };
-use poem::{EndpointExt, Route, Server, listener::TcpListener};
 use poem_openapi::OpenApiService;
 
 #[tokio::main]
@@ -12,7 +12,7 @@ async fn main() -> Result<(), std::io::Error> {
     dotenvy::dotenv().ok();
     let config = envy::from_env::<Config>().expect("parse env as Config");
 
-    peom_dev_take_home::tracing::init(&config.log_level);
+    poem_dev_take_home::tracing::init(&config.log_level);
 
     let api_service = OpenApiService::new(OpenApiDoc, "Take Home Assessment API Docs", "1.0");
     let ui = api_service.swagger_ui();
