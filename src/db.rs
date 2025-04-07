@@ -5,12 +5,15 @@ use crate::{
     schemas::{NewUser, UserDbSchema},
 };
 
+/// In-memory database for user management
+/// This is a simple implementation of a database that stores user information
 pub struct InMemDatabase {
     pub(crate) user_db: BTreeMap<String, UserDbSchema>,
     pub(crate) black_listed_db: Vec<String>,
 }
 
 impl InMemDatabase {
+    /// Stores a `NewUser` to database
     pub fn insert_user(&mut self, new_user: NewUser, pass_phrase: String) -> Result<(), ApiError> {
         let user: UserDbSchema = new_user.into();
         if let btree_map::Entry::Vacant(e) = self.user_db.entry(user.get_email().to_string()) {
@@ -19,14 +22,9 @@ impl InMemDatabase {
         } else {
             Err(ApiError::AlreadyExist)
         }
-        // if self.mem.contains_key(&user.id) {
-        //     Err(ApiError::AlreadyExist)
-        // } else {
-        //     self.mem.insert(user.id, user);
-        //     Ok(())
-        // }
     }
 
+    /// Get a `UserDbSchema` from database
     pub fn get_user(&self, email: &str) -> Result<UserDbSchema, ApiError> {
         if let Some(user) = self.user_db.get(email) {
             let value = user.clone();
@@ -36,10 +34,12 @@ impl InMemDatabase {
         }
     }
 
+    /// Stores a blacklisted token to database
     pub fn insert_black_list(&mut self, new_token: String) {
         self.black_listed_db.push(new_token)
     }
 
+    /// Checks blacklisted token existence in database
     pub fn check_token_black_listed(&self, token: &str) -> bool {
         for blacklisted_token in &self.black_listed_db {
             if blacklisted_token == token {

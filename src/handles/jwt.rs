@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::ApiError;
 
+/// JWT claims
 #[derive(Deserialize, Serialize)]
 struct Claims {
     sub: String,
@@ -12,6 +13,7 @@ struct Claims {
     exp: usize,
 }
 
+/// JWT token decoder
 pub fn handle_jwt_token(jwt: &str, hmac_secret: &str) -> Result<String, ApiError> {
     jsonwebtoken::decode::<Claims>(
         jwt,
@@ -33,6 +35,7 @@ pub fn handle_jwt_token(jwt: &str, hmac_secret: &str) -> Result<String, ApiError
     })
 }
 
+/// JWT header extractor
 pub fn extract_header_value(token: &HeaderValue) -> Option<&str> {
     token
         .to_str()
@@ -40,6 +43,9 @@ pub fn extract_header_value(token: &HeaderValue) -> Option<&str> {
         .map(|t| t.split(' ').collect::<Vec<&str>>()[1])
 }
 
+/// JWT token creator
+/// Creates a JWT token with a 1-day expiration time
+/// and the provided user ID and name.
 pub fn create_jwt(uid: &str, name: &str, hmac_secret: &str) -> Result<String, ApiError> {
     let expiration = Utc::now()
         .checked_add_signed(chrono::Duration::days(1))

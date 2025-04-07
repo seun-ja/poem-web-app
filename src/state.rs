@@ -4,6 +4,7 @@ use serde::Deserialize;
 
 use crate::db::InMemDatabase;
 
+/// Application state
 pub struct AppState {
     pub db: Mutex<InMemDatabase>,
     pub passphrase: String,
@@ -11,6 +12,7 @@ pub struct AppState {
 }
 
 impl AppState {
+    /// Creates a new instance of `AppState`
     pub fn build(config: Config) -> poem::Result<Self> {
         let db = Mutex::new(InMemDatabase {
             user_db: BTreeMap::new(),
@@ -25,6 +27,7 @@ impl AppState {
     }
 }
 
+/// Configuration for the application
 #[derive(Deserialize)]
 pub struct Config {
     pub passphrase: String,

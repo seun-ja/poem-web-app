@@ -15,6 +15,7 @@ mod schemas {
 
     use crate::{error::ApiError, handles::jwt::create_jwt};
 
+    /// Represents a user in the database
     #[derive(Debug, Clone, Deserialize, Object)]
     pub struct UserDbSchema {
         pub id: Uuid,
@@ -25,6 +26,7 @@ mod schemas {
     }
 
     impl UserDbSchema {
+        /// Verifies users credentials
         pub fn verify_password(
             &self,
             password: &str,
@@ -44,10 +46,12 @@ mod schemas {
     }
 
     impl UserDbSchema {
+        /// Gets user's email
         pub fn get_email(&self) -> &str {
             &self.email
         }
 
+        /// Encrypts user's password
         pub fn encrypt_password(&mut self, pass_phrase: String) -> Result<Self, ApiError> {
             let salt = general_purpose::STANDARD_NO_PAD.encode(pass_phrase);
             self.encrypted_password = Argon2::default()
@@ -61,6 +65,7 @@ mod schemas {
         }
     }
 
+    /// Represents a new user
     #[derive(Debug, Clone, Deserialize)]
     pub struct NewUser {
         pub email: String,
@@ -81,6 +86,8 @@ mod schemas {
         }
     }
 
+    /// User's successful login information
+    /// Contains JWT token
     #[derive(Debug, Clone, Deserialize, Object)]
     pub struct LoggedUser {
         token: String,
@@ -90,6 +97,7 @@ mod schemas {
 pub mod tracing {
     use tracing_subscriber::{layer::SubscriberExt as _, EnvFilter};
 
+    /// Initializes the tracing subscriber with the given environment filter.
     pub fn init(env_filter: &str) {
         let env_filter = EnvFilter::from(env_filter);
         let subscriber = tracing_subscriber::registry()
@@ -99,7 +107,3 @@ pub mod tracing {
             .expect("Failed to set global default subscriber");
     }
 }
-
-// pub trait PasswordEncryptor {
-//     fn encrypt_password(&mut self, pass_phrase: String) -> Result<Self, ApiError>;
-// }

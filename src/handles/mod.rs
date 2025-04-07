@@ -23,6 +23,7 @@ use crate::{
     state::AppState,
 };
 
+/// OpenAPI documentation
 #[derive(Debug)]
 pub struct OpenApiDoc;
 

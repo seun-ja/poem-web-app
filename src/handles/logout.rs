@@ -1,5 +1,8 @@
 use crate::{error::ApiError, state::AppState};
 
+
+/// Handles user logout
+/// Blacklists JWT token
 pub fn black_list_user_jwt(token: &str, data: &AppState) -> Result<(), ApiError> {
     data.db
         .lock()
