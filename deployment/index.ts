@@ -69,7 +69,7 @@ const service = new k8s.core.v1.Service("poem-dev-service", {
     selector: appLabels,
     ports: [
       {
-        port: 80,
+        port: 8000,
         targetPort: 8000,
       },
     ],

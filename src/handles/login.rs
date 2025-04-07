@@ -8,6 +8,7 @@ pub struct LoginParameters {
     pub password: String,
 }
 
+/// Handles user login
 pub async fn login(params: LoginParameters, data: &AppState) -> Result<LoggedUser, ApiError> {
     data.db
         .lock()
