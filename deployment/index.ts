@@ -5,15 +5,15 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 const config = new pulumi.Config();
-const namespaceName = "poem-dev";
-// const image = config.require("poem_dev_take_home:local");
+const appName = "poem-dev";
 const image = config.require("dockerImage");
+const isMinikube = config.requireBoolean("isMinikube");
 const passPhrase = pulumi.secret(process.env.PASSPHRASE || "");
 const hmacSecret = pulumi.secret(process.env.HMAC_SECRET || "");
 const logLevel = process.env.LOG_LEVEL || "info";
 
 const ns = new k8s.core.v1.Namespace("poem-dev-ns", {
-  metadata: { name: namespaceName },
+  metadata: { name: appName },
 });
 
 const secret = new k8s.core.v1.Secret("poem-dev-secret", {
@@ -28,7 +28,7 @@ const secret = new k8s.core.v1.Secret("poem-dev-secret", {
   },
 });
 
-const appLabels = { app: "poem-dev" };
+const appLabels = { app: appName };
 const deployment = new k8s.apps.v1.Deployment("poem-dev-deploy", {
   metadata: {
     namespace: ns.metadata.name,
@@ -76,4 +76,8 @@ const service = new k8s.core.v1.Service("poem-dev-service", {
   },
 });
 
-export const name = deployment.metadata.name;
+export const ip = isMinikube
+  ? service.spec.clusterIP
+  : service.status.loadBalancer.apply(
+      (lb) => lb.ingress[0].ip || lb.ingress[0].hostname,
+    );

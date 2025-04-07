@@ -1,3 +1,4 @@
 config:
   poem_dev_take_home:local: poem_dev_take_home:local
   poem_dev:dockerImage: poem_dev_take_home:local
+  poem_dev:isMinikube: "true"
