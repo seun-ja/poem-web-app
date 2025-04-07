@@ -23,8 +23,8 @@ poem-openapi = { version = "5", features = ["swagger-ui", "uuid"] }
 uuid = { version = "1.15.1", features = ["serde", "v4"] }
 jsonwebtoken = "9.3.1"
 argon2 = "0.5.3"
-base64 = "0.22.1"
 chrono = "0.4.40"
+rand = { version = "0.8", features = ["std_rng"] }
 
 dotenvy = "0.15"
 envy = "0.4.2"

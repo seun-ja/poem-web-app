@@ -8,7 +8,6 @@ const config = new pulumi.Config();
 const appName = "poem-dev";
 const image = config.require("dockerImage");
 const isMinikube = config.requireBoolean("isMinikube");
-const passPhrase = pulumi.secret(process.env.PASSPHRASE || "");
 const hmacSecret = pulumi.secret(process.env.HMAC_SECRET || "");
 const logLevel = process.env.LOG_LEVEL || "info";
 
@@ -22,7 +21,6 @@ const secret = new k8s.core.v1.Secret("poem-dev-secret", {
     namespace: ns.metadata.name,
   },
   stringData: {
-    PASSPHRASE: passPhrase,
     HMAC_SECRET: hmacSecret,
     LOG_LEVEL: logLevel,
   },

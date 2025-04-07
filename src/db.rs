@@ -14,10 +14,10 @@ pub struct InMemDatabase {
 
 impl InMemDatabase {
     /// Stores a `NewUser` to database
-    pub fn insert_user(&mut self, new_user: NewUser, pass_phrase: String) -> Result<(), ApiError> {
+    pub fn insert_user(&mut self, new_user: NewUser) -> Result<(), ApiError> {
         let user: UserDbSchema = new_user.into();
         if let btree_map::Entry::Vacant(e) = self.user_db.entry(user.get_email().to_string()) {
-            e.insert(user.clone().encrypt_password(pass_phrase)?);
+            e.insert(user.clone().encrypt_password()?);
             Ok(())
         } else {
             Err(ApiError::AlreadyExist)

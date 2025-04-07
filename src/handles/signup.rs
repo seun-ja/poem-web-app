@@ -5,5 +5,5 @@ pub async fn signup(params: NewUser, data: &AppState) -> Result<(), ApiError> {
     data.db
         .lock()
         .map_err(|err| ApiError::LockPoison(err.to_string()))?
-        .insert_user(params, data.passphrase.clone())
+        .insert_user(params)
 }

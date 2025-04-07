@@ -8,7 +8,6 @@ mod schemas {
         password_hash::{PasswordHasher, SaltString},
         Argon2, PasswordHash, PasswordVerifier as _,
     };
-    use base64::{engine::general_purpose, Engine};
     use poem_openapi::Object;
     use serde::Deserialize;
     use uuid::Uuid;
@@ -52,13 +51,10 @@ mod schemas {
         }
 
         /// Encrypts user's password
-        pub fn encrypt_password(&mut self, pass_phrase: String) -> Result<Self, ApiError> {
-            let salt = general_purpose::STANDARD_NO_PAD.encode(pass_phrase);
+        pub fn encrypt_password(&mut self) -> Result<Self, ApiError> {
+            let salt = SaltString::generate(&mut rand::thread_rng());
             self.encrypted_password = Argon2::default()
-                .hash_password(
-                    self.encrypted_password.as_bytes(),
-                    &SaltString::from_b64(&salt).map_err(ApiError::ErrorParsingSaltString)?,
-                )
+                .hash_password(self.encrypted_password.as_bytes(), &salt)
                 .map_err(ApiError::FailedHashingPassword)?
                 .to_string();
             Ok(self.clone())

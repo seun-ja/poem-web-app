@@ -7,7 +7,6 @@ use crate::db::InMemDatabase;
 /// Application state
 pub struct AppState {
     pub db: Mutex<InMemDatabase>,
-    pub passphrase: String,
     pub hmac_secret: String,
 }
 
@@ -21,7 +20,6 @@ impl AppState {
 
         Ok(Self {
             db,
-            passphrase: config.passphrase.clone(),
             hmac_secret: config.hmac_secret.clone(),
         })
     }
@@ -30,7 +28,6 @@ impl AppState {
 /// Configuration for the application
 #[derive(Deserialize)]
 pub struct Config {
-    pub passphrase: String,
     pub hmac_secret: String,
     pub log_level: String,
 }

@@ -78,3 +78,9 @@ Once setup, run
 ```bash
 pulumi up
 ```
+
+## JWT
+
+We have a simple JWT implementation, a JWK is issued once logged in and required for `/protected` route.
+
+an `HMAC_SECRET` is required in `.env` file. The secret should be generated off the SHA-256 Algorithm
