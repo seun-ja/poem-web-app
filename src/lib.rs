@@ -5,10 +5,10 @@ pub mod state;
 
 mod schemas {
     use argon2::{
-        Argon2, PasswordHash, PasswordVerifier as _,
         password_hash::{PasswordHasher, SaltString},
+        Argon2, PasswordHash, PasswordVerifier as _,
     };
-    use base64::{Engine, engine::general_purpose};
+    use base64::{engine::general_purpose, Engine};
     use poem_openapi::Object;
     use serde::Deserialize;
     use uuid::Uuid;
@@ -88,7 +88,7 @@ mod schemas {
 }
 
 pub mod tracing {
-    use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _};
+    use tracing_subscriber::{layer::SubscriberExt as _, EnvFilter};
 
     pub fn init(env_filter: &str) {
         let env_filter = EnvFilter::from(env_filter);

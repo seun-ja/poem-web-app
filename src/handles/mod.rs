@@ -9,14 +9,14 @@ use jwt::{extract_header_value, handle_jwt_token};
 use logout::black_list_user_jwt;
 use poem::web::{Data, Query};
 use poem_openapi::{
-    OpenApi,
     payload::{Json, PlainText},
+    OpenApi,
 };
 
 use crate::{
     error::ApiError,
     handles::{
-        login::{LoginParameters, login},
+        login::{login, LoginParameters},
         signup::signup,
     },
     schemas::{LoggedUser, NewUser},
