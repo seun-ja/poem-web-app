@@ -1,4 +1,4 @@
-use poem::{error::ResponseError, http::StatusCode};
+use poem::{error::ResponseError, http::StatusCode, IntoResponse};
 
 #[derive(Debug, thiserror::Error)]
 pub enum ApiError {
@@ -50,5 +50,18 @@ impl ResponseError for ApiError {
             ApiError::NoTokenProvided => StatusCode::UNAUTHORIZED,
             ApiError::UnableToDecodeClaims(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
+    }
+
+    fn as_response(&self) -> poem::Response
+    where
+        Self: std::error::Error + Send + Sync + 'static,
+    {
+        tracing::error!("Status: {}, Message: {}", self.status(), &self.to_string());
+        let mut resp = self.to_string().into_response();
+        resp.set_status(self.status());
+        if resp.status().as_u16() == 500 {
+            resp.set_body("Internal Server Error");
+        }
+        resp
     }
 }
