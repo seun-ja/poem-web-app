@@ -42,16 +42,10 @@ impl OpenApiDoc {
         Data(data): Data<&Arc<AppState>>,
     ) -> poem::Result<Json<LoggedUser>> {
         if let Some(header_value) = req.headers().get("Authorization") {
-            if let Some(token) = extract_header_value(header_value) {
-                if data
-                    .db
-                    .lock()
-                    .map_err(|err| ApiError::LockPoison(err.to_string()))?
-                    .check_token_black_listed(token)
-                {
-                    return Err(ApiError::TokenBlacklisted.into());
-                }
-            }
+            data.db
+                .lock()
+                .map_err(|err| ApiError::LockPoison(err.to_string()))?
+                .check_token_black_listed(extract_header_value(header_value)?)?
         }
 
         login(params, data)
@@ -77,20 +71,14 @@ impl OpenApiDoc {
         Data(data): Data<&Arc<AppState>>,
     ) -> poem::Result<PlainText<String>> {
         if let Some(header_value) = req.headers().get("Authorization") {
-            if let Some(token) = extract_header_value(header_value) {
-                if data
-                    .db
-                    .lock()
-                    .map_err(|err| ApiError::LockPoison(err.to_string()))?
-                    .check_token_black_listed(token)
-                {
-                    return Err(ApiError::Unauthorized.into());
-                }
-                handle_jwt_token(token, &data.hmac_secret)
-                    .map(|name| Ok(PlainText(format!("Access granted, user: {}", name))))?
-            } else {
-                Err(ApiError::NoTokenProvided.into())
-            }
+            let token = extract_header_value(header_value)?;
+            data.db
+                .lock()
+                .map_err(|err| ApiError::LockPoison(err.to_string()))?
+                .check_token_black_listed(token)?;
+
+            handle_jwt_token(token, &data.hmac_secret)
+                .map(|name| Ok(PlainText(format!("Access granted, user: {}", name))))?
         } else {
             Err(ApiError::Unauthorized.into())
         }
@@ -103,13 +91,9 @@ impl OpenApiDoc {
         Data(data): Data<&Arc<AppState>>,
     ) -> poem::Result<()> {
         if let Some(header_value) = req.headers().get("Authorization") {
-            if let Some(token) = extract_header_value(header_value) {
-                black_list_user_jwt(token, data)
-                    .map_err(|err| err.into())
-                    .map(|_| ())
-            } else {
-                Err(ApiError::Unauthorized.into())
-            }
+            black_list_user_jwt(extract_header_value(header_value)?, data)
+                .map_err(|err| err.into())
+                .map(|_| ())
         } else {
             Err(ApiError::Unauthorized.into())
         }
