@@ -36,11 +36,18 @@ pub fn handle_jwt_token(jwt: &str, hmac_secret: &str) -> Result<String, ApiError
 }
 
 /// JWT header extractor
-pub fn extract_header_value(token: &HeaderValue) -> Option<&str> {
+pub fn extract_header_value(token: &HeaderValue) -> Result<&str, ApiError> {
     token
         .to_str()
-        .ok()
-        .map(|t| t.split(' ').collect::<Vec<&str>>()[1])
+        .map(|t| t.split(' ').collect::<Vec<&str>>())
+        .map(|d| {
+            if !d.len() == 2 {
+                Err(ApiError::InvalidJWTFormat)
+            } else {
+                Ok(d[1])
+            }
+        })
+        .map_err(|e| ApiError::ParseFailure(e.to_string()))?
 }
 
 /// JWT token creator

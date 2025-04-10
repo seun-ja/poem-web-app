@@ -30,6 +30,10 @@ pub enum ApiError {
     NoTokenProvided,
     #[error("Unable to decode claims: {0}")]
     UnableToDecodeClaims(#[source] anyhow::Error),
+    #[error("Invalid JWT format")]
+    InvalidJWTFormat,
+    #[error("Parse failure: {0}")]
+    ParseFailure(String),
 }
 
 impl ResponseError for ApiError {
@@ -49,6 +53,8 @@ impl ResponseError for ApiError {
             ApiError::FailedHashingPassword(_) => StatusCode::INTERNAL_SERVER_ERROR,
             ApiError::NoTokenProvided => StatusCode::UNAUTHORIZED,
             ApiError::UnableToDecodeClaims(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            ApiError::InvalidJWTFormat => StatusCode::UNAUTHORIZED,
+            ApiError::ParseFailure(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 
@@ -56,7 +62,11 @@ impl ResponseError for ApiError {
     where
         Self: std::error::Error + Send + Sync + 'static,
     {
-        tracing::error!("Status: {}, Message: {}", self.status(), &self.to_string());
+        tracing::error!(
+            "Status code: {}, Message: {}",
+            self.status().as_u16(),
+            &self.to_string()
+        );
         let mut resp = self.to_string().into_response();
         resp.set_status(self.status());
         if resp.status().as_u16() == 500 {

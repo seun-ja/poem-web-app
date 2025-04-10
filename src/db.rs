@@ -40,12 +40,12 @@ impl InMemDatabase {
     }
 
     /// Checks blacklisted token existence in database
-    pub fn check_token_black_listed(&self, token: &str) -> bool {
+    pub fn check_token_black_listed(&self, token: &str) -> Result<(), ApiError> {
         for blacklisted_token in &self.black_listed_db {
             if blacklisted_token == token {
-                return true;
+                return Err(ApiError::TokenBlacklisted);
             }
         }
-        false
+        Ok(())
     }
 }
