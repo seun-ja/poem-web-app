@@ -3,16 +3,16 @@ use serde::Deserialize;
 use crate::{error::ApiError, schemas::LoggedUser, state::AppState};
 
 #[derive(Debug, Deserialize)]
-pub struct LoginParameters {
+pub struct LoginBody {
     pub email: String,
     pub password: String,
 }
 
 /// Handles user login
-pub async fn login(params: LoginParameters, data: &AppState) -> Result<LoggedUser, ApiError> {
+pub async fn login(body: LoginBody, data: &AppState) -> Result<LoggedUser, ApiError> {
     data.db
         .lock()
         .map_err(|err| ApiError::LockPoison(err.to_string()))?
-        .get_user_by_email(&params.email)?
-        .verify_password(&params.password, &data.hmac_secret)
+        .get_user_by_email(&body.email)?
+        .verify_password(&body.password, &data.hmac_secret)
 }

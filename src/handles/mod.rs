@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use jwt::{extract_header_value, handle_jwt_token};
 use logout::black_list_user_jwt;
-use poem::web::{Data, Query};
+use poem::web::{Data, Json as JsonBody};
 use poem_openapi::{
     payload::{Json, PlainText},
     OpenApi,
@@ -16,7 +16,7 @@ use poem_openapi::{
 use crate::{
     error::ApiError,
     handles::{
-        login::{login, LoginParameters},
+        login::{login, LoginBody},
         signup::signup,
     },
     schemas::{LoggedUser, NewUser},
@@ -37,7 +37,7 @@ impl OpenApiDoc {
     #[oai(path = "/login", method = "post")]
     async fn login(
         &self,
-        Query(params): Query<LoginParameters>,
+        JsonBody(body): JsonBody<LoginBody>,
         req: &poem::Request,
         Data(data): Data<&Arc<AppState>>,
     ) -> poem::Result<Json<LoggedUser>> {
@@ -48,20 +48,16 @@ impl OpenApiDoc {
                 .check_token_black_listed(extract_header_value(header_value)?)?
         }
 
-        login(params, data)
-            .await
-            .map_err(|err| err.into())
-            .map(Json)
+        login(body, data).await.map_err(|err| err.into()).map(Json)
     }
 
-    #[tracing::instrument(skip(data, params))]
     #[oai(path = "/signup", method = "post")]
     async fn signup(
         &self,
-        Query(params): Query<NewUser>,
+        JsonBody(body): JsonBody<NewUser>,
         Data(data): Data<&Arc<AppState>>,
     ) -> poem::Result<()> {
-        signup(params, data).await.map_err(|err| err.into())
+        signup(body, data).await.map_err(|err| err.into())
     }
 
     #[oai(path = "/protected", method = "get")]
