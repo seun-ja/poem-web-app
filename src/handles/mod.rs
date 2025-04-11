@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use jwt::{extract_header_value, handle_jwt_token};
 use logout::black_list_user_jwt;
-use poem::web::{Data, Query};
+use poem::web::{Data, Json as JsonBody};
 use poem_openapi::{
     payload::{Json, PlainText},
     OpenApi,
@@ -37,7 +37,7 @@ impl OpenApiDoc {
     #[oai(path = "/login", method = "post")]
     async fn login(
         &self,
-        Query(params): Query<LoginParameters>,
+        JsonBody(params): JsonBody<LoginParameters>,
         req: &poem::Request,
         Data(data): Data<&Arc<AppState>>,
     ) -> poem::Result<Json<LoggedUser>> {
@@ -54,11 +54,10 @@ impl OpenApiDoc {
             .map(Json)
     }
 
-    #[tracing::instrument(skip(data, params))]
     #[oai(path = "/signup", method = "post")]
     async fn signup(
         &self,
-        Query(params): Query<NewUser>,
+        JsonBody(params): JsonBody<NewUser>,
         Data(data): Data<&Arc<AppState>>,
     ) -> poem::Result<()> {
         signup(params, data).await.map_err(|err| err.into())
