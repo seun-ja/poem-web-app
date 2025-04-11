@@ -25,10 +25,18 @@ impl InMemDatabase {
     }
 
     /// Get a `UserDbSchema` from database
-    pub fn get_user(&self, email: &str) -> Result<UserDbSchema, ApiError> {
+    pub fn get_user_by_email(&self, email: &str) -> Result<UserDbSchema, ApiError> {
         if let Some(user) = self.user_db.get(email) {
             let value = user.clone();
             Ok(value)
+        } else {
+            Err(ApiError::NonExistence)
+        }
+    }
+
+    pub fn assert_user_exists(&self, id: &str) -> Result<(), ApiError> {
+        if self.user_db.values().any(|user| user.id.to_string() == id) {
+            Ok(())
         } else {
             Err(ApiError::NonExistence)
         }

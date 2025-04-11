@@ -7,14 +7,14 @@ use crate::error::ApiError;
 
 /// JWT claims
 #[derive(Deserialize, Serialize)]
-struct Claims {
-    sub: String,
-    name: String,
+pub struct Claims {
+    pub sub: String,
+    pub name: String,
     exp: usize,
 }
 
 /// JWT token decoder
-pub fn handle_jwt_token(jwt: &str, hmac_secret: &str) -> Result<String, ApiError> {
+pub fn handle_jwt_token(jwt: &str, hmac_secret: &str) -> Result<Claims, ApiError> {
     jsonwebtoken::decode::<Claims>(
         jwt,
         &DecodingKey::from_secret(hmac_secret.as_bytes()),
@@ -31,7 +31,8 @@ pub fn handle_jwt_token(jwt: &str, hmac_secret: &str) -> Result<String, ApiError
                     Ok(())
                 }
             });
-        claims.claims.name
+
+        claims.claims
     })
 }
 

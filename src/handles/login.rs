@@ -13,6 +13,6 @@ pub async fn login(params: LoginParameters, data: &AppState) -> Result<LoggedUse
     data.db
         .lock()
         .map_err(|err| ApiError::LockPoison(err.to_string()))?
-        .get_user(&params.email)?
+        .get_user_by_email(&params.email)?
         .verify_password(&params.password, &data.hmac_secret)
 }

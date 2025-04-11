@@ -72,13 +72,17 @@ impl OpenApiDoc {
     ) -> poem::Result<PlainText<String>> {
         if let Some(header_value) = req.headers().get("Authorization") {
             let token = extract_header_value(header_value)?;
-            data.db
+            let db = data
+                .db
                 .lock()
-                .map_err(|err| ApiError::LockPoison(err.to_string()))?
-                .check_token_black_listed(token)?;
+                .map_err(|err| ApiError::LockPoison(err.to_string()))?;
 
-            handle_jwt_token(token, &data.hmac_secret)
-                .map(|name| Ok(PlainText(format!("Access granted, user: {}", name))))?
+            db.check_token_black_listed(token)?;
+
+            handle_jwt_token(token, &data.hmac_secret).map(|claims| {
+                db.assert_user_exists(&claims.sub)?;
+                Ok(PlainText(format!("Access granted, user: {}", claims.name)))
+            })?
         } else {
             Err(ApiError::Unauthorized.into())
         }
