@@ -16,7 +16,7 @@ use poem_openapi::{
 use crate::{
     error::ApiError,
     handles::{
-        login::{login, LoginParameters},
+        login::{login, LoginBody},
         signup::signup,
     },
     schemas::{LoggedUser, NewUser},
@@ -37,7 +37,7 @@ impl OpenApiDoc {
     #[oai(path = "/login", method = "post")]
     async fn login(
         &self,
-        JsonBody(params): JsonBody<LoginParameters>,
+        JsonBody(body): JsonBody<LoginBody>,
         req: &poem::Request,
         Data(data): Data<&Arc<AppState>>,
     ) -> poem::Result<Json<LoggedUser>> {
@@ -48,19 +48,16 @@ impl OpenApiDoc {
                 .check_token_black_listed(extract_header_value(header_value)?)?
         }
 
-        login(params, data)
-            .await
-            .map_err(|err| err.into())
-            .map(Json)
+        login(body, data).await.map_err(|err| err.into()).map(Json)
     }
 
     #[oai(path = "/signup", method = "post")]
     async fn signup(
         &self,
-        JsonBody(params): JsonBody<NewUser>,
+        JsonBody(body): JsonBody<NewUser>,
         Data(data): Data<&Arc<AppState>>,
     ) -> poem::Result<()> {
-        signup(params, data).await.map_err(|err| err.into())
+        signup(body, data).await.map_err(|err| err.into())
     }
 
     #[oai(path = "/protected", method = "get")]
