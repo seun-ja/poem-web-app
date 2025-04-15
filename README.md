@@ -84,3 +84,16 @@ pulumi up
 We have a simple JWT implementation, a JWK is issued once logged in and required for `/protected` route.
 
 an `HMAC_SECRET` is required in `.env` file. The secret should be generated off the SHA-256 Algorithm
+
+## Environment Variables
+
+For the program to run you need two environment variables
+
+- `HMAC_SECRET` - The secret used to sign JWT tokens
+- `LOG_LEVEL` - Log level for the application
+
+### For example
+```bash
+HMAC_SECRET = "C812BEEC03597FE788771212141CD4EB96E9D1C2D763E8651DEFC38453F54EF7" # Only for testing
+LOG_LEVEL = "debug"
+```
