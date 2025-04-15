@@ -62,7 +62,7 @@ mod schemas {
     }
 
     /// Represents a new user
-    #[derive(Debug, Clone, Deserialize)]
+    #[derive(Debug, Clone, Deserialize, Object)]
     pub struct NewUser {
         pub email: String,
         pub password: String,

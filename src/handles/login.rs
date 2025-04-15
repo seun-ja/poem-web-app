@@ -1,8 +1,9 @@
+use poem_openapi::Object;
 use serde::Deserialize;
 
 use crate::{error::ApiError, schemas::LoggedUser, state::AppState};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Object)]
 pub struct LoginBody {
     pub email: String,
     pub password: String,

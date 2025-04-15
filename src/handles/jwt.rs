@@ -1,6 +1,5 @@
 use chrono::{DateTime, Utc};
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
-use poem::http::HeaderValue;
 use serde::{Deserialize, Serialize};
 
 use crate::error::ApiError;
@@ -34,21 +33,6 @@ pub fn handle_jwt_token(jwt: &str, hmac_secret: &str) -> Result<Claims, ApiError
 
         claims.claims
     })
-}
-
-/// JWT header extractor
-pub fn extract_header_value(token: &HeaderValue) -> Result<&str, ApiError> {
-    token
-        .to_str()
-        .map(|t| t.split(' ').collect::<Vec<&str>>())
-        .map(|d| {
-            if !d.len() == 2 {
-                Err(ApiError::InvalidJWTFormat)
-            } else {
-                Ok(d[1])
-            }
-        })
-        .map_err(|e| ApiError::ParseFailure(e.to_string()))?
 }
 
 /// JWT token creator

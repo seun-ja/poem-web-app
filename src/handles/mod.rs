@@ -5,12 +5,13 @@ pub mod signup;
 
 use std::sync::Arc;
 
-use jwt::{extract_header_value, handle_jwt_token};
+use jwt::handle_jwt_token;
 use logout::black_list_user_jwt;
-use poem::web::{Data, Json as JsonBody};
+use poem::web::Data;
 use poem_openapi::{
+    auth::Bearer,
     payload::{Json, PlainText},
-    OpenApi,
+    OpenApi, SecurityScheme,
 };
 
 use crate::{
@@ -22,6 +23,10 @@ use crate::{
     schemas::{LoggedUser, NewUser},
     state::AppState,
 };
+
+#[derive(SecurityScheme)]
+#[oai(ty = "bearer", key_name = "Authorization")]
+struct BearerAuth(Bearer);
 
 /// OpenAPI documentation
 #[derive(Debug)]
@@ -37,16 +42,14 @@ impl OpenApiDoc {
     #[oai(path = "/login", method = "post")]
     async fn login(
         &self,
-        JsonBody(body): JsonBody<LoginBody>,
-        req: &poem::Request,
+        Json(body): Json<LoginBody>,
+        BearerAuth(bearer): BearerAuth,
         Data(data): Data<&Arc<AppState>>,
     ) -> poem::Result<Json<LoggedUser>> {
-        if let Some(header_value) = req.headers().get("Authorization") {
-            data.db
-                .lock()
-                .map_err(|err| ApiError::LockPoison(err.to_string()))?
-                .check_token_black_listed(extract_header_value(header_value)?)?
-        }
+        data.db
+            .lock()
+            .map_err(|err| ApiError::LockPoison(err.to_string()))?
+            .check_token_black_listed(&bearer.token)?;
 
         login(body, data).await.map_err(|err| err.into()).map(Json)
     }
@@ -54,7 +57,7 @@ impl OpenApiDoc {
     #[oai(path = "/signup", method = "post")]
     async fn signup(
         &self,
-        JsonBody(body): JsonBody<NewUser>,
+        Json(body): Json<NewUser>,
         Data(data): Data<&Arc<AppState>>,
     ) -> poem::Result<()> {
         signup(body, data).await.map_err(|err| err.into())
@@ -63,39 +66,30 @@ impl OpenApiDoc {
     #[oai(path = "/protected", method = "get")]
     async fn protected(
         &self,
-        req: &poem::Request,
+        BearerAuth(bearer): BearerAuth,
         Data(data): Data<&Arc<AppState>>,
     ) -> poem::Result<PlainText<String>> {
-        if let Some(header_value) = req.headers().get("Authorization") {
-            let token = extract_header_value(header_value)?;
-            let db = data
-                .db
-                .lock()
-                .map_err(|err| ApiError::LockPoison(err.to_string()))?;
+        let db = data
+            .db
+            .lock()
+            .map_err(|err| ApiError::LockPoison(err.to_string()))?;
 
-            db.check_token_black_listed(token)?;
+        db.check_token_black_listed(&bearer.token)?;
 
-            handle_jwt_token(token, &data.hmac_secret).map(|claims| {
-                db.assert_user_exists(&claims.sub)?;
-                Ok(PlainText(format!("Access granted, user: {}", claims.name)))
-            })?
-        } else {
-            Err(ApiError::Unauthorized.into())
-        }
+        handle_jwt_token(&bearer.token, &data.hmac_secret).map(|claims| {
+            db.assert_user_exists(&claims.sub)?;
+            Ok(PlainText(format!("Access granted, user: {}", claims.name)))
+        })?
     }
 
     #[oai(path = "/logout", method = "post")]
     async fn logout(
         &self,
-        req: &poem::Request,
+        BearerAuth(bearer): BearerAuth,
         Data(data): Data<&Arc<AppState>>,
     ) -> poem::Result<()> {
-        if let Some(header_value) = req.headers().get("Authorization") {
-            black_list_user_jwt(extract_header_value(header_value)?, data)
-                .map_err(|err| err.into())
-                .map(|_| ())
-        } else {
-            Err(ApiError::Unauthorized.into())
-        }
+        black_list_user_jwt(&bearer.token, data)
+            .map_err(|err| err.into())
+            .map(|_| ())
     }
 }
