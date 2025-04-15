@@ -20,7 +20,8 @@ impl InMemDatabase {
             e.insert(user.clone().encrypt_password()?);
             Ok(())
         } else {
-            Err(ApiError::AlreadyExist)
+            tracing::warn!("User already exists");
+            Err(ApiError::InvalidCredentials)
         }
     }
 
@@ -30,7 +31,8 @@ impl InMemDatabase {
             let value = user.clone();
             Ok(value)
         } else {
-            Err(ApiError::NonExistence)
+            tracing::warn!("User does not exist");
+            Err(ApiError::InvalidCredentials)
         }
     }
 
@@ -38,7 +40,8 @@ impl InMemDatabase {
         if self.user_db.values().any(|user| user.id.to_string() == id) {
             Ok(())
         } else {
-            Err(ApiError::NonExistence)
+            tracing::warn!("User does not exist");
+            Err(ApiError::InvalidCredentials)
         }
     }
 
